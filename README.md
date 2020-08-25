@@ -182,8 +182,8 @@ No sanitization is performed when displaying content.
 Attackers might use this to add scripts to usernames or bios:
 ```json
 {
-username: “LOL”,
-bio: “</script><script>alert(“XSS attack!”)</script>
+	username: “LOL”,
+	bio: “</script><script>alert(“XSS attack!”)</script>
 }
 ```
 ### Good:
