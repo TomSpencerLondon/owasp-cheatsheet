@@ -159,4 +159,105 @@ public String restricted() {
 }
 ```
 
-### 6. Security Misconfiguration
+## 6. Security Misconfiguration
+
+### Bad:
+No attack surface investigation. Lack of awareness of how many services are running on your server.
+
+### Good:
+Port scanning is performed as part of your continuous deployment procedure. See below, an example of how to do port scanning with nmap:
+```bash
+nmap 192.168.1.1-254
+```
+
+### 7. Cross Site Scripting (XSS)
+
+### Input sanitization
+### Bad:
+No sanitization is performed when displaying content.
+
+```html
+<script>window.__STATE__ = $(JSON.stringify({data})</script>
+```
+Attackers might use this to add scripts to usernames or bios:
+```json
+{
+	username: “LOL”,
+	bio: “</script><script>alert(“XSS attack!”)</script>
+}
+```
+### Good:
+One solution to this vulnerability is to use the serialize-javascript npm module to escape the rendered JSON:
+```bash
+> npm install --save serialize-javascript
+```
+The window variable can then be wrapped in the method serialise():
+```html
+<script>window.__STATE__ = ${ serialize( data, { isJSON: true } ) }</script>
+```
+
+## 8. Insecure deserialization
+### Bad:
+Usage of the following should be discouraged to avoid insecure deserialization attacks:
+1. XMLdecoder with external user defined parameters
+2. XStream with fromXML method (xstream version <= v1.46 is vulnerable to the serialization issue)
+3. ObjectInputStream with readObject
+4. Uses of readObject, readObjectNodData, readResolve or readExternal
+5. ObjectInputStream.readUnshared
+6. Serializable
+
+In your original code, you'll probably have something similar to:
+```java
+ObjectInputStream ois = new ObjectInputStream(is);
+String msg = (String) ois.readObject();
+```
+
+### Good:
+1. Prevent arbitrary classes from being deserialized. This safe behavior can be wrapped in a library like SerialKiller.
+2. Use a safe replacement for the generic readObject() method as seen here. Note that this addresses "billion laughs" type attacks by checking input length and number of objects deserialized.
+
+In order to detect malicious payloads or allow your application's classes only, we need to use SerialKiller instead of the standard java.io.ObjectInputStream. This can be done with a one-line change with the SerialKiller library:
+```java
+ObjectInputStream ois = new SerialKiller(is, "/etc/serialkiller.conf");
+String msg = (String) ois.readObject();
+```
+
+### 9. Using components with known vulnerabilities
+#### Bad:
+No library scanning is performed as part of the continuous deployment process.
+
+### Good:
+To scan all projects at once (recommended), use the --all-sub-projects flag:
+```bash
+snyk test --all-sub-projects 
+```
+To scan a specific project (for example, myapp):
+```bash
+snyk test --sub-project=myapp 
+```
+
+## 10. Insufficient logging or monitoring
+### Bad:
+No logging allows silent data breaches
+### Good:
+Extensive logging is performed with powerful libraries such as Log4j. Here is how to add log4j to your project:
+```maven
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-log4j2</artifactId>
+</dependency>
+```
